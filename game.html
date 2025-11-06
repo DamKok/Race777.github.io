@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Racer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+
+        #gameContainer {
+            width: 100%;
+            height: 100vh;
+            position: relative;
+            background: #000;
+        }
+
+        #road {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            background: 
+                linear-gradient(90deg, #333 0%, #333 20%, transparent 20%, transparent 80%, #333 80%, #333 100%),
+                linear-gradient(#444 1px, transparent 1px);
+            background-size: 100% 100%, 100% 50px;
+            animation: roadMove 2s linear infinite;
+        }
+
+        @keyframes roadMove {
+            0% { background-position: 0 0, 0 0; }
+            100% { background-position: 0 0, 0 50px; }
+        }
+
+        #playerCar {
+            width: 60px;
+            height: 100px;
+            background: linear-gradient(45deg, #ff0000, #cc0000);
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 10px 10px 0 0;
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+            transition: left 0.1s ease;
+        }
+
+        .car-wheel {
+            width: 15px;
+            height: 25px;
+            background: #333;
+            position: absolute;
+            bottom: -10px;
+            border-radius: 3px;
+        }
+
+        .wheel-front { left: 5px; }
+        .wheel-back { right: 5px; }
+
+        .obstacle {
+            width: 60px;
+            height: 100px;
+            position: absolute;
+            border-radius: 10px 10px 0 0;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+        }
+
+        #scoreDisplay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            z-index: 100;
+        }
+
+        #speedDisplay {
+            position: absolute;
+            top: 60px;
+            left: 20px;
+            color: #00ff00;
+            font-size: 18px;
+            z-index: 100;
+        }
+
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 100;
+        }
+
+        .control-btn {
+            width: 70px;
+            height: 70px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid white;
+            border-radius: 50%;
+            color: white;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            backdrop-filter: blur(10px);
+        }
+
+        .control-btn:active {
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(0.95);
+        }
+
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            display: none;
+            z-index: 1000;
+            border: 2px solid #ff0000;
+            min-width: 300px;
+        }
+
+        #gameOver h2 {
+            color: #ff0000;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+
+        #finalScore {
+            font-size: 24px;
+            margin: 20px 0;
+            color: #00ff00;
+        }
+
+        .game-btn {
+            background: linear-gradient(45deg, #0088cc, #0055aa);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            margin: 10px;
+            border-radius: 10px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .game-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0, 136, 204, 0.4);
+        }
+
+        #startScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            color: white;
+        }
+
+        #startScreen h1 {
+            font-size: 36px;
+            margin-bottom: 20px;
+            color: #ff0000;
+            text-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+        }
+
+        #startScreen p {
+            font-size: 18px;
+            margin-bottom: 30px;
+            text-align: center;
+            max-width: 80%;
+        }
+
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px;
+            max-width: 80%;
+        }
+
+        .lane-indicator {
+            position: absolute;
+            bottom: 160px;
+            width: 60px;
+            height: 5px;
+            background: #00ff00;
+            border-radius: 2px;
+            transition: left 0.1s ease;
+            z-index: 50;
+        }
+
+        @media (max-width: 768px) {
+            .control-btn {
+                width: 60px;
+                height: 60px;
+                font-size: 20px;
+            }
+            
+            #scoreDisplay {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="road"></div>
+        <div id="playerCar">
+            <div class="car-wheel wheel-front"></div>
+            <div class="car-wheel wheel-back"></div>
+        </div>
+        <div class="lane-indicator" id="laneIndicator"></div>
+        
+        <div id="scoreDisplay">Очки: 0</div>
+        <div id="speedDisplay">Скорость: 0 км/ч</div>
+        
+        <div id="controls">
+            <div class="control-btn" id="leftBtn">⬅️</div>
+            <div class="control-btn" id="rightBtn">➡️</div>
+        </div>
+        
+        <div id="startScreen">
+            <h1>🏎️ TELEGRAM RACER</h1>
+            <div class="instructions">
+                <p>🚗 <strong>Управление:</strong></p>
+                <p>• Нажимайте кнопки ← и → для перестроения</p>
+                <p>• Используйте стрелки на клавиатуре (на ПК)</p>
+                <p>• Обгоняйте машины и набирайте очки!</p>
+                <p>• Игра ускоряется со временем</p>
+            </div>
+            <button class="game-btn" id="startBtn">🚀 НАЧАТЬ ИГРУ</button>
+            <p style="margin-top: 20px; font-size: 14px; color: #888;">
+                Нажмите кнопку ниже чтобы поделиться результатом
+            </p>
+        </div>
+        
+        <div id="gameOver">
+            <h2>💥 АВАРИЯ!</h2>
+            <p>Игра окончена</p>
+            <div id="finalScore">Ваш счет: 0</div>
+            <button class="game-btn" id="restartBtn">🔄 Играть снова</button>
+            <button class="game-btn" id="shareBtn" style="background: linear-gradient(45deg, #28a745, #1e7e34);">
+                📤 Поделиться счетом
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Telegram WebApp API
+        let tg = window.Telegram.WebApp;
+        
+        // Игровые переменные
+        let gameActive = false;
+        let score = 0;
+        let gameSpeed = 5;
+        let playerLane = 1; // 0: левая, 1: центр, 2: правая
+        let obstacles = [];
+        let gameInterval;
+        let obstacleInterval;
+        let lanePositions = [20, 50, 80]; // Проценты от ширины экрана
+        
+        // Элементы DOM
+        const playerCar = document.getElementById('playerCar');
+        const laneIndicator = document.getElementById('laneIndicator');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const speedDisplay = document.getElementById('speedDisplay');
+        const gameOverScreen = document.getElementById('gameOver');
+        const startScreen = document.getElementById('startScreen');
+        const finalScore = document.getElementById('finalScore');
+        
+        // Инициализация игры
+        function initGame() {
+            // Инициализация Telegram WebApp
+            if (tg) {
+                tg.expand();
+                tg.BackButton.show();
+                tg.BackButton.onClick(exitGame);
+            }
+            
+            // Настройка управления
+            setupControls();
+            
+            // Показываем стартовый экран
+            startScreen.style.display = 'flex';
+        }
+        
+        function setupControls() {
+            // Кнопки управления
+            document.getElementById('leftBtn').addEventListener('click', moveLeft);
+            document.getElementById('rightBtn').addEventListener('click', moveRight);
+            document.getElementById('startBtn').addEventListener('click', startGame);
+            document.getElementById('restartBtn').addEventListener('click', startGame);
+            document.getElementById('shareBtn').addEventListener('click', shareScore);
+            
+            // Управление с клавиатуры
+            document.addEventListener('keydown', (e) => {
+                if (!gameActive) return;
+                
+                if (e.key === 'ArrowLeft') moveLeft();
+                if (e.key === 'ArrowRight') moveRight();
+                if (e.key === ' ' || e.key === 'Spacebar') startGame(); // Пробел для рестарта
+            });
+            
+            // Свайпы для мобильных устройств
+            let touchStartX = 0;
+            document.addEventListener('touchstart', (e) => {
+                touchStartX = e.touches[0].clientX;
+            });
+            
+            document.addEventListener('touchend', (e) => {
+                if (!gameActive) return;
+                
+                const touchEndX = e.changedTouches[0].clientX;
+                const diff = touchStartX - touchEndX;
+                
+                if (Math.abs(diff) > 50) { // Минимальная дистанция свайпа
+                    if (diff > 0) {
+                        moveRight();
+                    } else {
+                        moveLeft();
+                    }
+                }
+            });
+        }
+        
+        function startGame() {
+            // Сброс игры
+            gameActive = true;
+            score = 0;
+            gameSpeed = 5;
+            playerLane = 1;
+            obstacles = [];
+            
+            // Очистка предыдущих препятствий
+            document.querySelectorAll('.obstacle').forEach(obs => obs.remove());
+            
+            // Обновление интерфейса
+            startScreen.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+            updateScore();
+            updatePlayerPosition();
+            
+            // Запуск игрового цикла
+            clearInterval(gameInterval);
+            clearInterval(obstacleInterval);
+            
+            gameInterval = setInterval(gameLoop, 50);
+            obstacleInterval = setInterval(createObstacle, 2000 - Math.min(score, 1500));
+        }
+        
+        function gameLoop() {
+            if (!gameActive) return;
+            
+            moveObstacles();
+            checkCollisions();
+            updateScore();
+            increaseDifficulty();
+        }
+        
+        function moveLeft() {
+            if (playerLane > 0) {
+                playerLane--;
+                updatePlayerPosition();
+            }
+        }
+        
+        function moveRight() {
+            if (playerLane < 2) {
+                playerLane++;
+                updatePlayerPosition();
+            }
+        }
+        
+        function updatePlayerPosition() {
+            const position = lanePositions[playerLane];
+            playerCar.style.left = `calc(${position}% - 30px)`;
+            laneIndicator.style.left = `calc(${position}% - 30px)`;
+        }
+        
+        function createObstacle() {
+            if (!gameActive) return;
+            
+            const lane = Math.floor(Math.random() * 3);
+            const obstacle = document.createElement('div');
+            obstacle.className = 'obstacle';
+            
+            // Случайный цвет машины
+            const colors = [
+                'linear-gradient(45deg, #007bff, #0056b3)',
+                'linear-gradient(45deg, #28a745, #1e7e34)',
+                'linear-gradient(45deg, #6f42c1, #5a2d9c)',
+                'linear-gradient(45deg, #fd7e14, #e55a00)',
+                'linear-gradient(45deg, #e83e8c, #c21770)'
+            ];
+            obstacle.style.background = colors[Math.floor(Math.random() * colors.length)];
+            
+            obstacle.style.left = `calc(${lanePositions[lane]}% - 30px)`;
+            obstacle.style.top = '-100px';
+            
+            document.getElementById('gameContainer').appendChild(obstacle);
+            
+            obstacles.push({
+                element: obstacle,
+                lane: lane,
+                position: -100
+            });
+        }
+        
+        function moveObstacles() {
+            obstacles.forEach((obstacle, index) => {
+                obstacle.position += gameSpeed;
+                obstacle.element.style.top = obstacle.position + 'px';
+                
+                // Удаление вышедших за экран препятствий
+                if (obstacle.position > window.innerHeight) {
+                    obstacle.element.remove();
+                    obstacles.splice(index, 1);
+                    score += 10;
+                }
+            });
+        }
+        
+        function checkCollisions() {
+            const playerRect = playerCar.getBoundingClientRect();
+            
+            for (let obstacle of obstacles) {
+                const obstacleRect = obstacle.element.getBoundingClientRect();
+                
+                // Простая проверка столкновения
+                if (obstacle.lane === playerLane &&
+                    obstacleRect.bottom > playerRect.top &&
+                    obstacleRect.top < playerRect.bottom) {
+                    gameOver();
+                    return;
+                }
+            }
+        }
+        
+        function increaseDifficulty() {
+            // Увеличиваем скорость каждые 100 очков
+            if (score > 0 && score % 100 === 0) {
+                gameSpeed += 0.5;
+            }
+            
+            // Ускоряем создание препятствий
+            clearInterval(obstacleInterval);
+            const interval = Math.max(500, 2000 - score * 0.8);
+            obstacleInterval = setInterval(createObstacle, interval);
+        }
+        
+        function updateScore() {
+            scoreDisplay.textContent = `Очки: ${score}`;
+            speedDisplay.textContent = `Скорость: ${Math.round(gameSpeed * 20)} км/ч`;
+        }
+        
+        function gameOver() {
+            gameActive = false;
+            clearInterval(gameInterval);
+            clearInterval(obstacleInterval);
+            
+            finalScore.textContent = `Ваш счет: ${score}`;
+            gameOverScreen.style.display = 'block';
+            
+            // Вибрация (если поддерживается)
+            if (navigator.vibrate) {
+                navigator.vibrate(200);
+            }
+        }
+        
+        function shareScore() {
+            if (tg && tg.sendData) {
+                const gameData = {
+                    action: 'game_score',
+                    score: score,
+                    game: 'racer'
+                };
+                tg.sendData(JSON.stringify(gameData));
+            }
+            tg.close();
+        }
+        
+        function exitGame() {
+            if (gameActive) {
+                if (confirm('Завершить игру?')) {
+                    tg.close();
+                }
+            } else {
+                tg.close();
+            }
+        }
+        
+        // Запуск игры при загрузке
+        window.onload = initGame;
+        
+        // Адаптация к изменению размера экрана
+        window.addEventListener('resize', () => {
+            updatePlayerPosition();
+        });
+    </script>
+</body>
+</html>
